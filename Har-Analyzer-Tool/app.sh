@@ -2,10 +2,8 @@
 mkdir ./Docker_Build_har_analyzer
 cd ./Docker_Build_har_analyzer
 
-# Define your application's dependencies
 DEPENDENCIES=" pandas streamlit"
 
-# Create the Python script
 cat > app.py << EOF
 import os
 import shutil
@@ -18,8 +16,6 @@ import platform
 import zipfile
 from io import BytesIO
 import base64
-
-# Rest of the code...
 
 
 def load_har_file(filename):
@@ -42,12 +38,10 @@ def parse_har_file(har_dict):
         size_bytes = entry['response']['bodySize']
         time_ms = entry['time']
 
-        # Check for blocking resources
         is_blocking = any(url.endswith(ext) for ext in ('.js', '.css'))
         if is_blocking:
             blocking_resources.append([url, method, status, mime_type, size_bytes, time_ms])
 
-        # Check for third-party resources
         request_domain = urlparse(url).netloc
         if request_domain != first_request_domain:
             third_party_resources.append([url, method, status, mime_type, size_bytes, time_ms])
@@ -126,7 +120,7 @@ def app():
     analyze_button = st.button("3. Analyze HAR File")
 
     if har_file is not None and analyze_button:
-        har_filename = 'temp.har'  # Use a temporary file name
+        har_filename = 'temp.har' 
         with open(har_filename, "wb") as f:
             f.write(har_file.getvalue())
         
@@ -159,31 +153,16 @@ if __name__ == "__main__":
 
 EOF
 
-# Create a Dockerfile
 cat > Dockerfile << EOF
-# Use an official Python runtime as a parent image
+
 FROM python:3.10
-
-# Set the working directory in the container to /app
 WORKDIR /app
-
-# Add the current directory contents into the container at /app
 ADD . /app
-
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
-
-# Install any needed packages
 RUN pip install --no-cache-dir $DEPENDENCIES
-
-# Make port 8502 available to the world outside this container
-EXPOSE 8502
-
-# Run app.py when the container launches
+EXPOSE 8501
 CMD ["streamlit", "run", "app.py", "--browser.serverAddress=127.0.0.1", "--server.enableXsrfProtection=True", "--server.headless=True"]
 EOF
 
-# Build the Docker image
 docker build -t har_analyzer .
-
-# Run the Docker container
 docker run -p 127.0.0.1:8501:8501 har_analyzer
