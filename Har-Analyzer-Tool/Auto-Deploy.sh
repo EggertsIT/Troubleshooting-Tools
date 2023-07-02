@@ -155,7 +155,7 @@ EOF
 
 cat > Dockerfile << EOF
 
-FROM python:3.10
+FROM python:3.9
 WORKDIR /app
 ADD . /app
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
