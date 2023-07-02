@@ -2,10 +2,8 @@
 
 mkdir ./Docker_Build_handshake_analyzer
 cd ./Docker_Build_handshake_analyzer
-# Define your application's dependencies
 DEPENDENCIES="pyshark pandas streamlit"
 
-# Create the Python script
 cat > app.py << EOF
 import pyshark
 import pandas as pd
@@ -63,7 +61,7 @@ def main():
                 tmp.write(uploaded_file.getvalue())
                 tmp.close()  # Close the temporary file
 
-                pcap_file = Path(tmp.name)  # Convert to Path object
+                pcap_file = Path(tmp.name)  
                 df, consolidated_df = extract_traffic_details_from_pcap(pcap_file, case_id, 'tls.handshake.type == 1')
                 st.write(df)
                 st.write(consolidated_df)
@@ -90,34 +88,17 @@ if __name__ == "__main__":
     main()
 EOF
 
-# Create Dockerfile
 cat > Dockerfile << EOF
-# Use an official Python runtime as a parent image
 FROM python:3.9
-
-# Set the working directory in the container to /app
 WORKDIR /app
-
-# Add the current directory contents into the container at /app
 ADD . /app
-
 RUN apt-get update && apt-get install -y tshark
-
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
-
-# Install any needed packages
 RUN pip install --no-cache-dir $DEPENDENCIES
-
-# Make port 8501 available to the world outside this container
 EXPOSE 8501
-
-# Run app.py when the container launches
 CMD ["streamlit", "run", "app.py", "--browser.serverAddress=127.0.0.1", "--server.enableXsrfProtection=True", "--server.headless=True"]
 
 EOF
 
-# Build the Docker image
 docker build -t ssl_analyzer .
-
-# Run the Docker container
 docker run -p 127.0.0.1:8501:8501 ssl_analyzer
