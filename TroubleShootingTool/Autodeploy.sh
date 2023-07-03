@@ -190,7 +190,7 @@ def impressum():
         st.header("Report a Bug")
         st.markdown("""# Troubleshooting-Tools
 
-### in case you find a Bug pleae report with Screenshot to bug@eggerts.it    
+### in case you find a Bug please report it with screenshot to bug@eggerts.it    
 
 ## Please read this disclaimer carefully before using or relying on this Software.
 
