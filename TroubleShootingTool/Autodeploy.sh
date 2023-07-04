@@ -247,8 +247,7 @@ EOF
 
 # Create a Dockerfile
 cat > Dockerfile << EOF
-FROM python:3.9-slim as builder
-ENV DEBIAN_FRONTEND=noninteractive
+FROM python:3.9-slim
 WORKDIR /app
 ADD . /app
 RUN apt-get update && apt-get -y install tshark \
