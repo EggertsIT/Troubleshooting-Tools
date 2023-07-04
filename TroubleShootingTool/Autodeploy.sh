@@ -1,8 +1,14 @@
 #!/bin/bash
+docker version > /dev/null 2>&1
+
+if [ $? -ne 0 ]; then
+    echo "Error: Docker is not installed or running. Please install and start Docker, then try again."
+    exit 1
+fi
+
 mkdir ./Docker_Build_troubleshooting
 cd ./Docker_Build_troubleshooting
 
-# Create the Python script
 cat > app.py << EOF
 import os
 import json
@@ -151,12 +157,10 @@ def har_analysis():
     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     if har_file is not None and analyze_button:
-        har_filename = './temp.har'
-        with open(har_filename, "wb") as f:
-            f.write(har_file.getvalue())
-        
-        df, error_df, blocking_df, third_party_df, zip_data = analyze_har_file(har_filename, case_id)
-        os.remove(har_filename)
+        with tempfile.NamedTemporaryFile(suffix=".har", delete=True) as tmp:
+            tmp.write(har_file.getvalue())
+            tmp.flush()      
+            df, error_df, blocking_df, third_party_df, zip_data = analyze_har_file(tmp.name, case_id)
         st.success("HAR file analysis completed.")
 
         st.header("DataFrames")
@@ -182,6 +186,13 @@ def har_analysis():
     
 
 def impressum():
+        hide_menu_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+        """
+        st.markdown(hide_menu_style, unsafe_allow_html=True)
         st.header("Report a Bug")
         st.markdown("""# Troubleshooting-Tools
 
@@ -229,6 +240,7 @@ this list is not guaranteed to be complete.
 
 def main():
     st.sidebar.title("Navigation")
+    st.config.set_option('server.maxUploadSize', 1024)
 
     page = st.sidebar.radio("Go to", ["SSL Handshake Analysis", "HAR File Analysis", "Impressum"])
     
@@ -249,6 +261,7 @@ EOF
 cat > Dockerfile << EOF
 FROM python:3.9-slim
 WORKDIR /app
+RUN useradd -m appuser && chown -R appuser:appuser /app
 ADD . /app
 RUN apt-get update && apt-get -y install tshark \
     && pip install streamlit pandas pyshark \
@@ -256,12 +269,11 @@ RUN apt-get update && apt-get -y install tshark \
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+USER appuser
 ENTRYPOINT ["streamlit", "run", "app.py", "--browser.serverAddress=127.0.0.1", "--server.enableXsrfProtection=True", "--server.headless=True"]
 
 EOF
 
-# Build the Docker image
-docker build -t troubleshooting-tool . --no-cache
-
-# Run the Docker container
+docker build -t troubleshooting-tool .
 docker run -p 127.0.0.1:8501:8501 troubleshooting-tool
+
