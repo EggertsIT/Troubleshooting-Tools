@@ -1,6 +1,8 @@
 #!/bin/bash
 mkdir ./Docker_Build_troubleshooting
 cd ./Docker_Build_troubleshooting
+
+# Create the Python script
 cat > app.py << EOF
 import os
 import json
@@ -149,7 +151,7 @@ def har_analysis():
     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     if har_file is not None and analyze_button:
-        har_filename = 'temp.har'
+        har_filename = './temp.har'
         with open(har_filename, "wb") as f:
             f.write(har_file.getvalue())
         
@@ -180,17 +182,10 @@ def har_analysis():
     
 
 def impressum():
-        hide_menu_style = """
-        <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        </style>
-        """
-        st.markdown(hide_menu_style, unsafe_allow_html=True)
         st.header("Report a Bug")
         st.markdown("""# Troubleshooting-Tools
 
-### in case you find a Bug please report it with screenshot to bug@eggerts.it    
+### in case you find a Bug please report with screenshot to bug@eggerts.it    
 
 ## Please read this disclaimer carefully before using or relying on this Software.
 
@@ -227,7 +222,10 @@ def impressum():
 - BytesIO from io 
 
 this list is not guaranteed to be complete.
+
+
 """)
+
 
 def main():
     st.sidebar.title("Navigation")
@@ -247,20 +245,24 @@ if __name__ == "__main__":
 
 EOF
 
+# Create a Dockerfile
 cat > Dockerfile << EOF
-FROM python:3.9-slim
+FROM python:3.9-slim as builder
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 ADD . /app
+RUN apt-get update && apt-get -y install tshark \
+    && pip install streamlit pandas pyshark \
+    && apt-get update && apt-get -y install && rm -rf /var/lib/apt/lists/*
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
-RUN apt-get update && apt-get install -y tshark
-RUN pip install streamlit
-RUN pip install pandas
-RUN pip install pyshark
-RUN apt-get update && apt-get install -y && rm -rf /var/lib/apt/lists/*
 EXPOSE 8501
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableXsrfProtection=True", "--server.headless=True"]
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+ENTRYPOINT ["streamlit", "run", "app.py", "--browser.serverAddress=127.0.0.1", "--server.enableXsrfProtection=True", "--server.headless=True"]
+
 EOF
 
-docker build -t troubleshooting-tool .
+# Build the Docker image
+docker build -t troubleshooting-tool . --no-cache
+
+# Run the Docker container
 docker run -p 127.0.0.1:8501:8501 troubleshooting-tool
