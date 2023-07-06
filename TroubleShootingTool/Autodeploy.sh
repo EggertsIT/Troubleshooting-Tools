@@ -56,7 +56,7 @@ def load_har_file(filename):
     return har_dict
 
 
-def parse_har_file(har_dict):
+def parse_har_file(har_dict, blocking_time_threshold):
     data = []
     blocking_resources = []
     third_party_resources = []
@@ -71,7 +71,8 @@ def parse_har_file(har_dict):
         size_bytes = entry['response']['bodySize']
         time_ms = entry['time']
 
-        is_blocking = any(url.endswith(ext) for ext in ('.js', '.css'))
+        is_blocking = any(url.endswith(ext) for ext in ('.js', '.css')) or (time_ms > blocking_time_threshold)
+
         if is_blocking:
             blocking_resources.append([url, method, status, mime_type, size_bytes, time_ms])
 
@@ -84,9 +85,10 @@ def parse_har_file(har_dict):
     return data, blocking_resources, third_party_resources
 
 
-def analyze_har_file(filename, case_id):
+
+def analyze_har_file(filename, case_id, blocking_time_threshold):
     har_dict = load_har_file(filename)
-    data, blocking_resources, third_party_resources = parse_har_file(har_dict)
+    data, blocking_resources, third_party_resources = parse_har_file(har_dict, blocking_time_threshold)
 
     df = pd.DataFrame(data, columns=['URL', 'Method', 'Status', 'MIME Type', 'Size (bytes)', 'Time (ms)'])
     error_data = [entry for entry in data if 400 <= entry[2] < 600]
@@ -142,8 +144,6 @@ def pcap_analysis():
 
                 st.stop()
             
-    
-
 
 def har_analysis():
     har_file = st.file_uploader("1. Select HAR File", type=['har'])
@@ -156,20 +156,52 @@ def har_analysis():
         </style>
     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
+    blocking_time_threshold = st.slider("Blocking Time Threshold", min_value=0, max_value=1000, value=100, step=10)
+
     if har_file is not None and analyze_button:
         with tempfile.NamedTemporaryFile(suffix=".har", delete=True) as tmp:
             tmp.write(har_file.getvalue())
             tmp.flush()      
-            df, error_df, blocking_df, third_party_df, zip_data = analyze_har_file(tmp.name, case_id)
+            df, error_df, blocking_df, third_party_df, zip_data = analyze_har_file(tmp.name, case_id, blocking_time_threshold)
         st.success("HAR file analysis completed.")
 
         st.header("DataFrames")
         st.subheader("All Requests")
         st.write(df)
 
+        expander = st.expander("See explanation for error codes")
+        expander.write("""
+
+            - 400 Bad Request: This code is used when the server cannot understand the request due to malformed syntax or invalid parameters.
+                It is often caused by errors in the client's input or request structure.
+
+            - 401 Unauthorized: This status code is sent when authentication is required, and the client has not provided valid credentials or has not authenticated successfully.
+                It indicates that the requested resource requires authentication to access.
+
+            - 403 Forbidden: The server understands the request and the client is authenticated, but the client does not have sufficient permissions to access the requested resource.
+                This status code is often used for access control purposes.
+
+            - 404 Not Found: This is one of the most well-known status codes. It indicates that the requested resource could not be found on the server.
+                It is typically returned when the URL or URI provided in the request does not match any existing resource.
+
+            - 405 Method Not Allowed: This code is used when the client attempts to use an HTTP method that is not allowed for the requested resource.
+                For example, if a resource only allows GET requests and the client sends a POST request, the server may respond with a 405 status code.
+
+            - 408 Request Timeout: This code is sent when the server did not receive a complete request from the client within the time it was willing to wait.
+                It indicates that the server has timed out waiting for the client to send the necessary data.
+
+            - 429 Too Many Requests: This status code is returned when the client has sent too many requests in a given amount of time.
+                It is often used to prevent abuse or to enforce rate limiting on APIs.
+            """)
+
+        
         st.subheader("Error Requests")
         st.write(error_df)
 
+        expander = st.expander("See explanation for Blocking Resources")
+        expander.write("""
+It will apply to any(url.endswith(ext) for ext in ('.js', '.css')) or (time_ms > blocking_time_threshold)
+            """)
         st.subheader("Blocking Resources")
         st.write(blocking_df)
 
@@ -182,8 +214,6 @@ def har_analysis():
             file_name=f"{case_id}.zip",
             mime='application/zip'
         )
-
-    
 
 def impressum():
         hide_menu_style = """
@@ -238,22 +268,151 @@ this list is not guaranteed to be complete.
 """)
 
 
+def extract_rst_details_from_pcap(pcap_file, case_id, display_filter='tcp.flags.reset == 1'):
+    rst_details = []
+    cap = pyshark.FileCapture(str(pcap_file), display_filter=display_filter)  # Convert to string
+    for pkt in cap:
+        try:
+            ip_src = pkt.ip.src
+            ip_dst = pkt.ip.dst
+            rst_details.append({
+                'Source_IP': ip_src,
+                'Destination_IP': ip_dst,
+                'Timestamp': pkt.sniff_time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        except AttributeError:
+            pass
+    cap.close()
+    df = pd.DataFrame(rst_details)
+    consolidated_df = df.groupby(['Source_IP', 'Destination_IP']).size().reset_index(name='Number_of_RSTs')
+
+    return df, consolidated_df
+
+
+def rst_analysis():
+    hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
+    st.markdown("""
+    ## How To:
+
+    Identifying Connection Issues: A TCP RST packet is sent by a host to tear down a connection immediately.
+    It may indicate a host or application that's having trouble maintaining stable connections.
+
+    Troubleshooting: The termination of a TCP sessions might be an indication of an application error or Block.
+    
+    Correlate what you find here with what you find in the Client Handshake analysis to get a clue what might cause the problem.
+    
+    """)
+    uploaded_file = st.file_uploader("1. Select PCAP File", type=["pcap", "pcapng"])
+    case_id = st.text_input("2. Enter Case ID")
+
+    if st.button("3. TCP RST Details"):
+        if uploaded_file and case_id:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:  
+                tmp.write(uploaded_file.getvalue())
+                tmp.close()
+
+                pcap_file = Path(tmp.name)
+                df, consolidated_df = extract_rst_details_from_pcap(pcap_file, case_id, 'tcp.flags.reset == 1')
+                st.write(df)
+                st.write(consolidated_df)
+
+                with BytesIO() as zip_buffer:
+                    with ZipFile(zip_buffer, 'w') as zip_file:
+                        zip_file.writestr('rst_details.csv', df.to_csv(index=False))
+                        zip_file.writestr('consolidated_rst_details.csv', consolidated_df.to_csv(index=False))
+
+                    st.download_button(
+                        label="Download Results",
+                        data=zip_buffer.getvalue(),
+                        file_name=case_id + '_rst.zip',
+                        mime='application/zip'
+                    )
+
+                pcap_file.unlink()
+                st.stop()
+
+def extract_retransmissions_from_pcap(pcap_file, case_id, display_filter='tcp.analysis.retransmission'):
+    retransmission_details = []
+    cap = pyshark.FileCapture(str(pcap_file), display_filter=display_filter)  # Convert to string
+    for pkt in cap:
+        try:
+            ip_src = pkt.ip.src
+            ip_dst = pkt.ip.dst
+            retransmission_details.append({
+                'Source_IP': ip_src,
+                'Destination_IP': ip_dst,
+                'Timestamp': pkt.sniff_time.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        except AttributeError:
+            pass
+    cap.close()
+    df = pd.DataFrame(retransmission_details)
+    return df
+
+
+
+def retransmission_analysis():
+    hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("1. Select PCAP File", type=["pcap", "pcapng"])
+    case_id = st.text_input("2. Enter Case ID")
+
+    if st.button("3. TCP Retransmission Details"):
+        if uploaded_file and case_id:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:  
+                tmp.write(uploaded_file.getvalue())
+                tmp.close()
+
+                pcap_file = Path(tmp.name)
+                df = extract_retransmissions_from_pcap(pcap_file, case_id, 'tcp.analysis.retransmission')
+                st.write(df)
+
+                with BytesIO() as zip_buffer:
+                    with ZipFile(zip_buffer, 'w') as zip_file:
+                        zip_file.writestr('retransmission_details.csv', df.to_csv(index=False))
+
+                    st.download_button(
+                        label="Download Results",
+                        data=zip_buffer.getvalue(),
+                        file_name=case_id + '_retransmissions.zip',
+                        mime='application/zip'
+                    )
+
+                pcap_file.unlink()
+                st.stop()
+
 def main():
     st.sidebar.title("Navigation")
     st.config.set_option('server.maxUploadSize', 1024)
 
-    page = st.sidebar.radio("Go to", ["SSL Handshake Analysis", "HAR File Analysis", "Impressum"])
+    page = st.sidebar.radio("Go to", ["SSL Handshake Analysis", "HAR File Analysis", "TCP RST Analysis", "TCP Retransmission Analysis", "Impressum"])
     
     if page == "SSL Handshake Analysis":
         pcap_analysis()
     elif page == "HAR File Analysis":
         har_analysis()
+    elif page == "TCP RST Analysis":
+        rst_analysis()
+    elif page == "TCP Retransmission Analysis":
+        retransmission_analysis()
     elif page == "Impressum":
         impressum()
 
 
 if __name__ == "__main__":
     main()
+
 
 EOF
 
@@ -276,4 +435,3 @@ EOF
 
 docker build -t troubleshooting-tool .
 docker run -p 127.0.0.1:8501:8501 troubleshooting-tool
-
