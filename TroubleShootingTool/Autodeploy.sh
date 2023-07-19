@@ -422,9 +422,9 @@ FROM python:3.9-slim
 WORKDIR /app
 RUN useradd -m appuser && chown -R appuser:appuser /app
 ADD . /app
-RUN apt-get update && apt-get -y install tshark \
-    && pip install streamlit pandas pyshark \
-    && apt-get update && apt-get -y install && rm -rf /var/lib/apt/lists/*
+RUN apt -o "Acquire::https::Verify-Peer=false" update && apt -o "Acquire::https::Verify-Peer=false" -y install tshark \
+    && pip install streamlit pandas pyshark config --global http.sslVerify false \
+    && apt  -o "Acquire::https::Verify-Peer=false" update && apt -o "Acquire::https::Verify-Peer=false" -y install && rm -rf /var/lib/apt/lists/*
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
