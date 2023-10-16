@@ -119,7 +119,7 @@ def pcap_analysis():
 
     if st.button("3. SSL Traffic Details"):
         if uploaded_file and case_id:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:  
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp.close()
 
@@ -143,7 +143,7 @@ def pcap_analysis():
                 pcap_file.unlink()
 
                 st.stop()
-            
+
 
 def har_analysis():
     har_file = st.file_uploader("1. Select HAR File", type=['har'])
@@ -161,7 +161,7 @@ def har_analysis():
     if har_file is not None and analyze_button:
         with tempfile.NamedTemporaryFile(suffix=".har", delete=True) as tmp:
             tmp.write(har_file.getvalue())
-            tmp.flush()      
+            tmp.flush()
             df, error_df, blocking_df, third_party_df, zip_data = analyze_har_file(tmp.name, case_id, blocking_time_threshold)
         st.success("HAR file analysis completed.")
 
@@ -194,7 +194,7 @@ def har_analysis():
                 It is often used to prevent abuse or to enforce rate limiting on APIs.
             """)
 
-        
+
         st.subheader("Error Requests")
         st.write(error_df)
 
@@ -226,7 +226,7 @@ def impressum():
         st.header("Report a Bug")
         st.markdown("""# Troubleshooting-Tools
 
-### in case you find a Bug please report with screenshot to bug@eggerts.it    
+### in case you find a Bug please report with screenshot to bug@eggerts.it
 
 ## Please read this disclaimer carefully before using or relying on this Software.
 
@@ -257,10 +257,10 @@ def impressum():
 - streamlit
 - urlparse from urllib.parse
 - pyshark
-- ZipFile from zipfile 
+- ZipFile from zipfile
 - Path from pathlib
 - tempfile
-- BytesIO from io 
+- BytesIO from io
 
 this list is not guaranteed to be complete.
 
@@ -304,16 +304,16 @@ def rst_analysis():
     It may indicate a host or application that's having trouble maintaining stable connections.
 
     Troubleshooting: The termination of a TCP sessions might be an indication of an application error or Block.
-    
+
     Correlate what you find here with what you find in the Client Handshake analysis to get a clue what might cause the problem.
-    
+
     """)
     uploaded_file = st.file_uploader("1. Select PCAP File", type=["pcap", "pcapng"])
     case_id = st.text_input("2. Enter Case ID")
 
     if st.button("3. TCP RST Details"):
         if uploaded_file and case_id:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:  
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp.close()
 
@@ -370,7 +370,7 @@ def retransmission_analysis():
 
     if st.button("3. TCP Retransmission Details"):
         if uploaded_file and case_id:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:  
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp.close()
 
@@ -397,7 +397,7 @@ def main():
     st.config.set_option('server.maxUploadSize', 1024)
 
     page = st.sidebar.radio("Go to", ["SSL Handshake Analysis", "HAR File Analysis", "TCP RST Analysis", "TCP Retransmission Analysis", "Impressum"])
-    
+
     if page == "SSL Handshake Analysis":
         pcap_analysis()
     elif page == "HAR File Analysis":
@@ -422,34 +422,10 @@ FROM python:3.9-slim
 WORKDIR /app
 RUN useradd -m appuser && chown -R appuser:appuser /app
 ADD . /app
-RUN echo '-----BEGIN CERTIFICATE-----
-MIIE0zCCA7ugAwIBAgIJANu+mC2Jt3uTMA0GCSqGSIb3DQEBCwUAMIGhMQswCQYD
-VQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTERMA8GA1UEBxMIU2FuIEpvc2Ux
-FTATBgNVBAoTDFpzY2FsZXIgSW5jLjEVMBMGA1UECxMMWnNjYWxlciBJbmMuMRgw
-FgYDVQQDEw9ac2NhbGVyIFJvb3QgQ0ExIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRA
-enNjYWxlci5jb20wHhcNMTQxMjE5MDAyNzU1WhcNNDIwNTA2MDAyNzU1WjCBoTEL
-MAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExETAPBgNVBAcTCFNhbiBK
-b3NlMRUwEwYDVQQKEwxac2NhbGVyIEluYy4xFTATBgNVBAsTDFpzY2FsZXIgSW5j
-LjEYMBYGA1UEAxMPWnNjYWxlciBSb290IENBMSIwIAYJKoZIhvcNAQkBFhNzdXBw
-b3J0QHpzY2FsZXIuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
-qT7STSxZRTgEFFf6doHajSc1vk5jmzmM6BWuOo044EsaTc9eVEV/HjH/1DWzZtcr
-fTj+ni205apMTlKBW3UYR+lyLHQ9FoZiDXYXK8poKSV5+Tm0Vls/5Kb8mkhVVqv7
-LgYEmvEY7HPY+i1nEGZCa46ZXCOohJ0mBEtB9JVlpDIO+nN0hUMAYYdZ1KZWCMNf
-5J/aTZiShsorN2A38iSOhdd+mcRM4iNL3gsLu99XhKnRqKoHeH83lVdfu1XBeoQz
-z5V6gA3kbRvhDwoIlTBeMa5l4yRdJAfdpkbFzqiwSgNdhbxTHnYYorDzKfr2rEFM
-dsMU0DHdeAZf711+1CunuQIDAQABo4IBCjCCAQYwHQYDVR0OBBYEFLm33UrNww4M
-hp1d3+wcBGnFTpjfMIHWBgNVHSMEgc4wgcuAFLm33UrNww4Mhp1d3+wcBGnFTpjf
-oYGnpIGkMIGhMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTERMA8G
-A1UEBxMIU2FuIEpvc2UxFTATBgNVBAoTDFpzY2FsZXIgSW5jLjEVMBMGA1UECxMM
-WnNjYWxlciBJbmMuMRgwFgYDVQQDEw9ac2NhbGVyIFJvb3QgQ0ExIjAgBgkqhkiG
-9w0BCQEWE3N1cHBvcnRAenNjYWxlci5jb22CCQDbvpgtibd7kzAMBgNVHRMEBTAD
-AQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAw0NdJh8w3NsJu4KHuVZUrmZgIohnTm0j+
-RTmYQ9IKA/pvxAcA6K1i/LO+Bt+tCX+C0yxqB8qzuo+4vAzoY5JEBhyhBhf1uK+P
-/WVWFZN/+hTgpSbZgzUEnWQG2gOVd24msex+0Sr7hyr9vn6OueH+jj+vCMiAm5+u
-kd7lLvJsBu3AO3jGWVLyPkS3i6Gf+rwAp1OsRrv3WnbkYcFf9xjuaf4z0hRCrLN2
-xFNjavxrHmsH8jPHVvgc1VD0Opja0l/BRVauTrUaoW6tE+wFG5rEcPGS80jjHK4S
-pB5iDj2mUZH1T8lzYtuZy0ZPirxmtsk3135+CKNa2OCAhhFjE0xd
------END CERTIFICATE-----' > /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.pem && chmod 644 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.pem && pip install -trusted-host files.pythonhosted.org pip_system_certs && apt update && apt -y install tshark && pip install streamlit pandas pyshark config && apt update && apt -y install && rm -rf /var/lib/apt/lists/*
+
+RUN echo '-----BEGIN CERTIFICATE-----\n\MIIE0zCCA7ugAwIBAgIJANu+mC2Jt3uTMA0GCSqGSIb3DQEBCwUAMIGhMQswCQYD\n\VQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTERMA8GA1UEBxMIU2FuIEpvc2Ux\n\FTATBgNVBAoTDFpzY2FsZXIgSW5jLjEVMBMGA1UECxMMWnNjYWxlciBJbmMuMRgw\n\FgYDVQQDEw9ac2NhbGVyIFJvb3QgQ0ExIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRA\n\enNjYWxlci5jb20wHhcNMTQxMjE5MDAyNzU1WhcNNDIwNTA2MDAyNzU1WjCBoTEL\n\MAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExETAPBgNVBAcTCFNhbiBK\n\b3NlMRUwEwYDVQQKEwxac2NhbGVyIEluYy4xFTATBgNVBAsTDFpzY2FsZXIgSW5j\n\LjEYMBYGA1UEAxMPWnNjYWxlciBSb290IENBMSIwIAYJKoZIhvcNAQkBFhNzdXBw\n\b3J0QHpzY2FsZXIuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n\qT7STSxZRTgEFFf6doHajSc1vk5jmzmM6BWuOo044EsaTc9eVEV/HjH/1DWzZtcr\n\fTj+ni205apMTlKBW3UYR+lyLHQ9FoZiDXYXK8poKSV5+Tm0Vls/5Kb8mkhVVqv7\n\LgYEmvEY7HPY+i1nEGZCa46ZXCOohJ0mBEtB9JVlpDIO+nN0hUMAYYdZ1KZWCMNf\n\5J/aTZiShsorN2A38iSOhdd+mcRM4iNL3gsLu99XhKnRqKoHeH83lVdfu1XBeoQz\n\z5V6gA3kbRvhDwoIlTBeMa5l4yRdJAfdpkbFzqiwSgNdhbxTHnYYorDzKfr2rEFM\n\dsMU0DHdeAZf711+1CunuQIDAQABo4IBCjCCAQYwHQYDVR0OBBYEFLm33UrNww4M\n\hp1d3+wcBGnFTpjfMIHWBgNVHSMEgc4wgcuAFLm33UrNww4Mhp1d3+wcBGnFTpjf\n\oYGnpIGkMIGhMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTERMA8G\n\A1UEBxMIU2FuIEpvc2UxFTATBgNVBAoTDFpzY2FsZXIgSW5jLjEVMBMGA1UECxMM\n\WnNjYWxlciBJbmMuMRgwFgYDVQQDEw9ac2NhbGVyIFJvb3QgQ0ExIjAgBgkqhkiG\n\9w0BCQEWE3N1cHBvcnRAenNjYWxlci5jb22CCQDbvpgtibd7kzAMBgNVHRMEBTAD\n\AQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAw0NdJh8w3NsJu4KHuVZUrmZgIohnTm0j+\n\RTmYQ9IKA/pvxAcA6K1i/LO+Bt+tCX+C0yxqB8qzuo+4vAzoY5JEBhyhBhf1uK+P\n\/WVWFZN/+hTgpSbZgzUEnWQG2gOVd24msex+0Sr7hyr9vn6OueH+jj+vCMiAm5+u\n\kd7lLvJsBu3AO3jGWVLyPkS3i6Gf+rwAp1OsRrv3WnbkYcFf9xjuaf4z0hRCrLN2\n\xFNjavxrHmsH8jPHVvgc1VD0Opja0l/BRVauTrUaoW6tE+wFG5rEcPGS80jjHK4S\n\pB5iDj2mUZH1T8lzYtuZy0ZPirxmtsk3135+CKNa2OCAhhFjE0xd\n\-----END CERTIFICATE-----' > /tmp/ZscalerRootCertificate-2048-SHA256.pem
+RUN cp /tmp/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/; update-ca-certificates ;
+RUN apt update && apt -y install tshark && pip install streamlit pandas pyshark config && apt update && apt -y install && rm -rf /var/lib/apt/lists/*
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS false
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
